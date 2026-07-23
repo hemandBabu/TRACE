@@ -1,0 +1,760 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>TRACE — Track. Report. And Connect Everyone.</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<style>
+  :root{
+    --white:#FFFFFF;
+    --tint-1:#F8F9FA;
+    --tint-2:#F3F4F6;
+    --border:#E5E7EB;
+    --text:#374151;
+    --text-strong:#4B5563;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;height:100%;background:var(--white);}
+  body{
+    font-family:'Source Sans 3', sans-serif;
+    color:var(--text);
+    font-weight:400;
+    -webkit-font-smoothing:antialiased;
+  }
+  h1,h2,h3,label,button,.tab,th{font-weight:600;}
+  #app{max-width:960px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;}
+
+  header{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:14px 20px;border-bottom:1px solid var(--border);background:var(--white);
+  }
+  .brand-wrap{display:flex;flex-direction:column;}
+  .brand{font-size:17px;color:var(--text-strong);letter-spacing:.2px;}
+  .tagline{font-size:11px;color:var(--text-strong);margin-top:2px;}
+  .login-tagline{font-size:12px;color:var(--text-strong);text-align:center;margin:-10px 0 18px 0;}
+  .header-controls{display:flex;align-items:center;gap:10px;}
+  select, input, textarea{
+    font-family:inherit;font-size:14px;color:var(--text);
+    background:var(--white);border:1px solid var(--border);border-radius:6px;
+    padding:8px 10px;
+  }
+  select:focus, input:focus, textarea:focus{outline:1px solid var(--text-strong);}
+  button{
+    font-family:inherit;font-size:14px;cursor:pointer;
+    background:var(--text-strong);color:var(--white);
+    border:1px solid var(--text-strong);border-radius:6px;padding:9px 16px;
+  }
+  button:hover{background:var(--text);}
+  button.secondary{
+    background:var(--white);color:var(--text-strong);border:1px solid var(--border);
+  }
+  button.secondary:hover{background:var(--tint-2);}
+  button.tiny{padding:5px 9px;font-size:12px;}
+  button:focus-visible, select:focus-visible, input:focus-visible, .tab:focus-visible{
+    outline:2px solid var(--text-strong); outline-offset:2px;
+  }
+
+  #loginView{
+    flex:1;display:flex;align-items:center;justify-content:center;
+    background:var(--tint-1);
+  }
+  .login-card{
+    background:var(--white);border:1px solid var(--border);border-radius:10px;
+    padding:32px;width:320px;
+  }
+  .login-card h1{margin:0 0 18px 0;font-size:18px;color:var(--text-strong);text-align:center;}
+  .login-card .field{margin-bottom:12px;}
+  .login-card input, .login-card button{width:100%;}
+  .login-note{
+    font-size:12px;color:var(--text-strong);background:var(--tint-2);
+    border:1px solid var(--border);border-radius:6px;padding:8px 10px;margin-top:14px;
+  }
+
+  .tabs{display:flex;border-bottom:1px solid var(--border);background:var(--white);}
+  .tab{
+    flex:1;text-align:center;padding:13px 8px;color:var(--text-strong);
+    background:var(--tint-1);border-right:1px solid var(--border);cursor:pointer;font-size:14px;
+  }
+  .tab:last-child{border-right:none;}
+  .tab.active{background:var(--white);color:var(--text);border-bottom:2px solid var(--text-strong);margin-bottom:-1px;}
+
+  main{flex:1;padding:22px 20px 40px;background:var(--white);}
+  .panel{display:none;}
+  .panel.active{display:block;}
+
+  fieldset{border:1px solid var(--border);border-radius:8px;padding:14px 16px 16px;margin:0 0 18px 0;max-width:640px;}
+  legend{font-size:12px;color:var(--text-strong);text-transform:uppercase;letter-spacing:.04em;padding:0 6px;}
+  .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+  .form-grid .full{grid-column:1/-1;}
+  .field label{display:block;font-size:13px;margin-bottom:5px;color:var(--text-strong);}
+  .field input, .field select, .field textarea{width:100%;}
+
+  #missingMap, #foundMap{
+    height:220px;border:1px solid var(--border);border-radius:6px;margin-top:4px;
+    filter:grayscale(1) contrast(0.92) brightness(1.02);
+  }
+  .map-tip{font-size:12px;color:var(--text-strong);margin-top:4px;}
+  .coord-readout{font-size:12px;color:var(--text-strong);margin-top:4px;}
+
+  .custom-fields-list{max-width:640px;margin-bottom:8px;}
+  .custom-field-row{display:flex;gap:8px;margin-bottom:8px;align-items:center;}
+  .custom-field-row input{flex:1;}
+  .add-field-btn{margin-bottom:18px;}
+
+  .form-actions{margin-top:6px;display:flex;gap:10px;}
+
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  th,td{text-align:left;padding:10px 8px;border-bottom:1px solid var(--border);}
+  th{color:var(--text-strong);background:var(--tint-1);font-size:12px;text-transform:uppercase;letter-spacing:.03em;}
+  .status-pill{
+    display:inline-block;padding:3px 9px;border-radius:99px;font-size:11px;
+    background:var(--tint-2);border:1px solid var(--border);color:var(--text-strong);
+  }
+  .empty-state{color:var(--text-strong);font-size:14px;padding:30px 0;text-align:center;}
+
+  .modal-backdrop{
+    position:fixed;inset:0;background:rgba(55,65,81,0.35);
+    display:none;align-items:center;justify-content:center;z-index:50;
+  }
+  .modal-backdrop.show{display:flex;}
+  .modal{
+    background:var(--white);border:1px solid var(--border);border-radius:10px;
+    width:460px;max-width:92vw;padding:22px;max-height:80vh;overflow:auto;
+  }
+  .modal h2{margin:0 0 6px 0;font-size:16px;color:var(--text-strong);}
+  .modal .sub{font-size:12px;color:var(--text-strong);margin-bottom:14px;}
+  .email-preview{
+    background:var(--tint-1);border:1px solid var(--border);border-radius:6px;
+    padding:12px;font-size:13px;line-height:1.5;
+  }
+  .email-preview table{margin-top:8px;}
+  .email-preview td{padding:5px 6px;}
+  .modal-actions{margin-top:16px;text-align:right;}
+
+  @media (max-width:560px){
+    .form-grid{grid-template-columns:1fr;}
+    .tab{font-size:12px;padding:12px 4px;}
+  }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <header>
+    <div class="brand-wrap">
+      <div class="brand" id="brandLabel">TRACE</div>
+      <div class="tagline" id="taglineLabel"></div>
+    </div>
+    <div class="header-controls">
+      <select id="langSelect" aria-label="Language"></select>
+      <button class="secondary" id="logoutBtn" style="display:none;"></button>
+    </div>
+  </header>
+
+  <div id="loginView">
+    <div class="login-card">
+      <h1 id="loginTitle">Sign in</h1>
+      <div class="login-tagline" id="loginTaglineLabel"></div>
+      <div class="field">
+        <label id="emailLabel" for="emailInput">Email</label>
+        <input id="emailInput" type="email" autocomplete="email" />
+      </div>
+      <button id="sendLinkBtn"></button>
+      <div class="login-note" id="loginNote" style="display:none;"></div>
+    </div>
+  </div>
+
+  <div id="mainView" style="display:none;">
+    <div class="tabs">
+      <div class="tab active" data-panel="missing" id="tabMissingLabel"></div>
+      <div class="tab" data-panel="found" id="tabFoundLabel"></div>
+      <div class="tab" data-panel="dashboard" id="tabDashboardLabel"></div>
+    </div>
+
+    <main>
+      <div class="panel active" id="panel-missing">
+        <fieldset>
+          <legend data-k="legendIdentity"></legend>
+          <div class="form-grid">
+            <div class="field"><label data-k="fieldName"></label><input data-f="name" /></div>
+            <div class="field"><label data-k="fieldGender"></label>
+              <select data-f="gender">
+                <option value="">—</option>
+                <option value="male" data-k="genderMale"></option>
+                <option value="female" data-k="genderFemale"></option>
+                <option value="other" data-k="genderOther"></option>
+              </select>
+            </div>
+            <div class="field"><label data-k="fieldAge"></label><input data-f="age" type="number" min="0" /></div>
+            <div class="field"><label data-k="fieldHeight"></label><input data-f="height" type="number" min="0" /></div>
+            <div class="field"><label data-k="fieldWeight"></label><input data-f="weight" type="number" min="0" /></div>
+            <div class="field"><label data-k="fieldBloodGroup"></label><input data-f="bloodGroup" /></div>
+            <div class="field"><label data-k="fieldComplexion"></label><input data-f="complexion" /></div>
+            <div class="field"><label data-k="fieldHairColor"></label><input data-f="hairColor" /></div>
+            <div class="field"><label data-k="fieldEyeColor"></label><input data-f="eyeColor" /></div>
+            <div class="field"><label data-k="fieldLanguageSpoken"></label><input data-f="languageSpoken" /></div>
+            <div class="field full"><label data-k="fieldClothing"></label><input data-f="clothing" /></div>
+            <div class="field full"><label data-k="fieldMarks"></label><textarea data-f="marks" rows="2"></textarea></div>
+            <div class="field"><label data-k="fieldTimestamp"></label><input data-f="timestamp" type="datetime-local" /></div>
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend data-k="legendLocation"></legend>
+          <div id="missingMap"></div>
+          <div class="map-tip" data-k="mapTip"></div>
+          <div class="coord-readout" data-coord-for="missing">— , —</div>
+          <div class="field" style="margin-top:12px;"><label data-k="fieldNearestStation"></label><input data-f="nearestStation" /></div>
+        </fieldset>
+
+        <fieldset>
+          <legend data-k="legendReporter"></legend>
+          <div class="form-grid">
+            <div class="field"><label data-k="fieldReporterName"></label><input data-f="reporterName" /></div>
+            <div class="field"><label data-k="fieldRelation"></label><input data-f="relation" /></div>
+            <div class="field"><label data-k="fieldReporterPhone"></label><input data-f="reporterPhone" type="tel" /></div>
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend data-k="legendCustom"></legend>
+          <div class="custom-fields-list" id="customFieldsMissing"></div>
+          <button class="secondary tiny add-field-btn" id="addFieldMissingBtn"></button>
+        </fieldset>
+
+        <div class="form-actions">
+          <button id="submitMissingBtn"></button>
+          <button class="secondary" id="cancelMissingBtn" style="display:none;"></button>
+        </div>
+      </div>
+
+      <div class="panel" id="panel-found">
+        <fieldset>
+          <legend data-k="legendIdentity"></legend>
+          <div class="form-grid">
+            <div class="field"><label data-k="fieldName"></label><input data-f="name" /></div>
+            <div class="field"><label data-k="fieldGender"></label>
+              <select data-f="gender">
+                <option value="">—</option>
+                <option value="male" data-k="genderMale"></option>
+                <option value="female" data-k="genderFemale"></option>
+                <option value="other" data-k="genderOther"></option>
+              </select>
+            </div>
+            <div class="field"><label data-k="fieldAge"></label><input data-f="age" type="number" min="0" /></div>
+            <div class="field"><label data-k="fieldHeight"></label><input data-f="height" type="number" min="0" /></div>
+            <div class="field"><label data-k="fieldWeight"></label><input data-f="weight" type="number" min="0" /></div>
+            <div class="field"><label data-k="fieldBloodGroup"></label><input data-f="bloodGroup" /></div>
+            <div class="field"><label data-k="fieldComplexion"></label><input data-f="complexion" /></div>
+            <div class="field"><label data-k="fieldHairColor"></label><input data-f="hairColor" /></div>
+            <div class="field"><label data-k="fieldEyeColor"></label><input data-f="eyeColor" /></div>
+            <div class="field"><label data-k="fieldLanguageSpoken"></label><input data-f="languageSpoken" /></div>
+            <div class="field full"><label data-k="fieldClothing"></label><input data-f="clothing" /></div>
+            <div class="field full"><label data-k="fieldMarks"></label><textarea data-f="marks" rows="2"></textarea></div>
+            <div class="field"><label data-k="fieldTimestamp"></label><input data-f="timestamp" type="datetime-local" /></div>
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend data-k="legendLocation"></legend>
+          <div id="foundMap"></div>
+          <div class="map-tip" data-k="mapTip"></div>
+          <div class="coord-readout" data-coord-for="found">— , —</div>
+          <div class="field" style="margin-top:12px;"><label data-k="fieldNearestStation"></label><input data-f="nearestStation" /></div>
+        </fieldset>
+
+        <fieldset>
+          <legend data-k="legendReporter"></legend>
+          <div class="form-grid">
+            <div class="field"><label data-k="fieldReporterName"></label><input data-f="reporterName" /></div>
+            <div class="field"><label data-k="fieldRelation"></label><input data-f="relation" /></div>
+            <div class="field"><label data-k="fieldReporterPhone"></label><input data-f="reporterPhone" type="tel" /></div>
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend data-k="legendCustom"></legend>
+          <div class="custom-fields-list" id="customFieldsFound"></div>
+          <button class="secondary tiny add-field-btn" id="addFieldFoundBtn"></button>
+        </fieldset>
+
+        <div class="form-actions">
+          <button id="submitFoundBtn"></button>
+          <button class="secondary" id="cancelFoundBtn" style="display:none;"></button>
+        </div>
+      </div>
+
+      <div class="panel" id="panel-dashboard">
+        <div id="dashboardEmpty" class="empty-state" style="display:none;"></div>
+        <table id="dashboardTable" style="display:none;">
+          <thead>
+            <tr>
+              <th data-k="colType"></th>
+              <th data-k="colName"></th>
+              <th data-k="colSubmitted"></th>
+              <th data-k="colStatus"></th>
+              <th data-k="colAction"></th>
+            </tr>
+          </thead>
+          <tbody id="dashboardBody"></tbody>
+        </table>
+      </div>
+    </main>
+  </div>
+
+</div>
+
+<div class="modal-backdrop" id="matchModalBackdrop">
+  <div class="modal">
+    <h2 id="matchModalTitle"></h2>
+    <div class="sub" id="matchModalSub"></div>
+    <div class="email-preview" id="matchEmailPreview"></div>
+    <div class="modal-actions"><button class="secondary" id="closeMatchModal"></button></div>
+  </div>
+</div>
+
+<script>
+(function(){
+
+  /* ---------- i18n (English + Malayalam only) ---------- */
+  const STR = {
+    en: {
+      brand:"TRACE", tagline:"Track. Report. And Connect Everyone.", loginTitle:"Sign in", emailLabel:"Email", sendLink:"Send magic link",
+      verifyPrompt:"A sign-in link was sent to {email}. This is a demo — click below to continue as if you followed the email link.",
+      verifyBtn:"Continue with magic link", logout:"Log out",
+      tabMissing:"Report Missing", tabFound:"Report Found", tabDashboard:"Dashboard",
+      legendIdentity:"Identity & physical details", legendLocation:"Location", legendReporter:"Reporter details", legendCustom:"Additional custom fields",
+      fieldName:"Name", fieldGender:"Gender", genderMale:"Male", genderFemale:"Female", genderOther:"Other",
+      fieldAge:"Age", fieldHeight:"Height (cm)", fieldWeight:"Weight (kg)",
+      fieldBloodGroup:"Blood group", fieldComplexion:"Complexion", fieldHairColor:"Hair colour",
+      fieldEyeColor:"Eye colour", fieldLanguageSpoken:"Language spoken", fieldClothing:"Clothing worn (last seen)",
+      fieldMarks:"Identification marks", fieldTimestamp:"Timestamp",
+      fieldNearestStation:"Nearest police station",
+      fieldReporterName:"Reporter name", fieldRelation:"Relation to person", fieldReporterPhone:"Reporter phone number",
+      fieldLocation:"Last known location", mapTip:"Click the map to set the coordinate.",
+      addCustomField:"+ Add custom field", customFieldLabel:"Field name", customFieldValue:"Value", removeField:"Remove",
+      submit:"Save report", update:"Save changes", cancel:"Cancel edit",
+      colType:"Type", colName:"Name", colSubmitted:"Submitted", colStatus:"Status", colAction:"Action",
+      edit:"Edit", statusOpen:"Active", statusMatched:"Match found",
+      emptyDashboard:"No reports yet. Use Report Missing or Report Found to add one.",
+      typeMissing:"Missing", typeFound:"Found",
+      matchTitle:"Match notification (simulated)", matchSub:"Score exceeded the 75% threshold — an email would be sent to the reporter and the administrator.",
+      emailTo:"To", emailSubject:"Subject", emailSubjectText:"Possible match found — {pct}% confidence",
+      close:"Close", locationLoading:"Locating place…", coordSet:"Near {lat}, {lng}", coordUnset:"No location selected",
+      requiredAlert:"Please fill in name, age and select a location on the map."
+    },
+    ml: {
+      brand:"ട്രെയ്സ്", tagline:"ട്രാക്ക് ചെയ്യുക. റിപ്പോർട്ട് ചെയ്യുക. എല്ലാവരെയും ബന്ധിപ്പിക്കുക.", loginTitle:"സൈൻ ഇൻ ചെയ്യുക", emailLabel:"ഇമെയിൽ", sendLink:"മാജിക് ലിങ്ക് അയയ്ക്കുക",
+      verifyPrompt:"{email} എന്ന വിലാസത്തിലേക്ക് ഒരു സൈൻ-ഇൻ ലിങ്ക് അയച്ചു. ഇത് ഒരു ഡെമോ ആണ് — ഇമെയിൽ ലിങ്ക് പിന്തുടർന്നതുപോലെ തുടരാൻ താഴെ ക്ലിക്ക് ചെയ്യുക.",
+      verifyBtn:"മാജിക് ലിങ്ക് ഉപയോഗിച്ച് തുടരുക", logout:"ലോഗ് ഔട്ട്",
+      tabMissing:"കാണാതായവരെ റിപ്പോർട്ട് ചെയ്യുക", tabFound:"കണ്ടെത്തിയവരെ റിപ്പോർട്ട് ചെയ്യുക", tabDashboard:"ഡാഷ്ബോർഡ്",
+      legendIdentity:"തിരിച്ചറിയലും ശാരീരിക വിവരങ്ങളും", legendLocation:"സ്ഥലം", legendReporter:"റിപ്പോർട്ട് ചെയ്യുന്നയാളുടെ വിവരങ്ങൾ", legendCustom:"അധിക കസ്റ്റം ഫീൽഡുകൾ",
+      fieldName:"പേര്", fieldGender:"ലിംഗം", genderMale:"പുരുഷൻ", genderFemale:"സ്ത്രീ", genderOther:"മറ്റുള്ളവ",
+      fieldAge:"പ്രായം", fieldHeight:"ഉയരം (സെ.മീ)", fieldWeight:"ഭാരം (കി.ഗ്രാം)",
+      fieldBloodGroup:"രക്തഗ്രൂപ്പ്", fieldComplexion:"നിറം", fieldHairColor:"മുടിയുടെ നിറം",
+      fieldEyeColor:"കണ്ണിന്റെ നിറം", fieldLanguageSpoken:"സംസാരിക്കുന്ന ഭാഷ", fieldClothing:"അവസാനം കണ്ട വസ്ത്രധാരണം",
+      fieldMarks:"തിരിച്ചറിയൽ അടയാളങ്ങൾ", fieldTimestamp:"സമയമുദ്ര",
+      fieldNearestStation:"അടുത്തുള്ള പോലീസ് സ്റ്റേഷൻ",
+      fieldReporterName:"റിപ്പോർട്ട് ചെയ്യുന്നയാളുടെ പേര്", fieldRelation:"വ്യക്തിയുമായുള്ള ബന്ധം", fieldReporterPhone:"റിപ്പോർട്ട് ചെയ്യുന്നയാളുടെ ഫോൺ നമ്പർ",
+      fieldLocation:"അവസാനം അറിയപ്പെട്ട സ്ഥലം", mapTip:"നിർദ്ദേശാങ്കം സജ്ജമാക്കാൻ മാപ്പിൽ ക്ലിക്ക് ചെയ്യുക.",
+      addCustomField:"+ കസ്റ്റം ഫീൽഡ് ചേർക്കുക", customFieldLabel:"ഫീൽഡിന്റെ പേര്", customFieldValue:"മൂല്യം", removeField:"നീക്കം ചെയ്യുക",
+      submit:"റിപ്പോർട്ട് സേവ് ചെയ്യുക", update:"മാറ്റങ്ങൾ സേവ് ചെയ്യുക", cancel:"എഡിറ്റിംഗ് റദ്ദാക്കുക",
+      colType:"തരം", colName:"പേര്", colSubmitted:"സമർപ്പിച്ചത്", colStatus:"നില", colAction:"നടപടി",
+      edit:"എഡിറ്റ് ചെയ്യുക", statusOpen:"സജീവം", statusMatched:"പൊരുത്തം കണ്ടെത്തി",
+      emptyDashboard:"ഇതുവരെ റിപ്പോർട്ടുകൾ ഇല്ല. ഒന്ന് ചേർക്കാൻ കാണാതായവരെ റിപ്പോർട്ട് ചെയ്യുക അല്ലെങ്കിൽ കണ്ടെത്തിയവരെ റിപ്പോർട്ട് ചെയ്യുക ഉപയോഗിക്കുക.",
+      typeMissing:"കാണാതായ", typeFound:"കണ്ടെത്തിയ",
+      matchTitle:"പൊരുത്ത അറിയിപ്പ് (സിമുലേറ്റഡ്)", matchSub:"സ്കോർ 75% പരിധി കടന്നു — റിപ്പോർട്ട് ചെയ്തയാൾക്കും അഡ്മിനും ഒരു ഇമെയിൽ അയയ്ക്കും.",
+      emailTo:"ലേക്ക്", emailSubject:"വിഷയം", emailSubjectText:"സാധ്യമായ പൊരുത്തം കണ്ടെത്തി — {pct}% ആത്മവിശ്വാസം",
+      close:"അടയ്ക്കുക", locationLoading:"സ്ഥലം കണ്ടെത്തുന്നു…", coordSet:"ഏകദേശം {lat}, {lng}", coordUnset:"സ്ഥലം തിരഞ്ഞെടുത്തിട്ടില്ല",
+      requiredAlert:"ദയവായി പേര്, പ്രായം എന്നിവ പൂരിപ്പിച്ച് മാപ്പിൽ ഒരു സ്ഥലം തിരഞ്ഞെടുക്കുക."
+    }
+  };
+  let lang = "en";
+  function t(key, vars){
+    let s = (STR[lang] && STR[lang][key]) || STR.en[key] || key;
+    if(vars){ Object.keys(vars).forEach(k=>{ s = s.replace("{"+k+"}", vars[k]); }); }
+    return s;
+  }
+
+  /* ---------- App state (in-memory only) ---------- */
+  let session = null;
+  let pendingEmail = null;
+  let records = [];
+  let nextId = 1;
+  let editingId = { missing:null, found:null };
+  let coords = { missing:null, found:null };
+  let maps = { missing:null, found:null };
+  let markers = { missing:null, found:null };
+  let customFields = { missing:[], found:[] }; // [{id,label,value}]
+  let customFieldId = 1;
+
+  /* ---------- Matching engine ---------- */
+  function jaroWinkler(a, b){
+    a = (a||"").toLowerCase().trim(); b = (b||"").toLowerCase().trim();
+    if(!a || !b) return 0;
+    if(a === b) return 1;
+    const matchDist = Math.floor(Math.max(a.length,b.length)/2) - 1;
+    const aMatches = new Array(a.length).fill(false);
+    const bMatches = new Array(b.length).fill(false);
+    let matches = 0, transpositions = 0;
+    for(let i=0;i<a.length;i++){
+      const start = Math.max(0, i-matchDist), end = Math.min(i+matchDist+1, b.length);
+      for(let j=start;j<end;j++){
+        if(bMatches[j] || a[i]!==b[j]) continue;
+        aMatches[i]=true; bMatches[j]=true; matches++; break;
+      }
+    }
+    if(matches===0) return 0;
+    let k=0;
+    for(let i=0;i<a.length;i++){
+      if(!aMatches[i]) continue;
+      while(!bMatches[k]) k++;
+      if(a[i]!==b[k]) transpositions++;
+      k++;
+    }
+    transpositions = transpositions/2;
+    const jaro = (matches/a.length + matches/b.length + (matches-transpositions)/matches)/3;
+    let prefix=0;
+    for(let i=0;i<Math.min(4,a.length,b.length);i++){ if(a[i]===b[i]) prefix++; else break; }
+    return jaro + prefix*0.1*(1-jaro);
+  }
+  function marksScore(a,b){
+    const ta = new Set((a||"").toLowerCase().split(/[\s,]+/).filter(Boolean));
+    const tb = new Set((b||"").toLowerCase().split(/[\s,]+/).filter(Boolean));
+    if(ta.size===0 || tb.size===0) return 0;
+    let common = 0;
+    ta.forEach(tok=>{ if(tb.has(tok)) common++; });
+    return common / Math.max(ta.size, tb.size);
+  }
+  function computeMatchScore(r1, r2){
+    const nameScore = jaroWinkler(r1.name, r2.name) * 25;
+    const ageDiff = Math.abs((parseFloat(r1.age)||0) - (parseFloat(r2.age)||0));
+    const ageScore = Math.max(0, 1 - ageDiff/4) * 20;
+    const hDiff = Math.abs((parseFloat(r1.height)||0) - (parseFloat(r2.height)||0));
+    const heightScore = Math.max(0, 1 - hDiff/5) * 15;
+    const wDiff = Math.abs((parseFloat(r1.weight)||0) - (parseFloat(r2.weight)||0));
+    const weightScore = Math.max(0, 1 - wDiff/7) * 10;
+    const mScore = marksScore(r1.marks, r2.marks) * 30;
+    return Math.round(nameScore + ageScore + heightScore + mScore + weightScore);
+  }
+  function runMatchEngine(record){
+    const opposite = record.type === "missing" ? "found" : "missing";
+    const candidates = records.filter(r => r.type === opposite && r.id !== record.id);
+    let best = null;
+    candidates.forEach(c=>{
+      const score = computeMatchScore(record, c);
+      if(score >= 75 && (!best || score > best.score)) best = { record:c, score };
+    });
+    if(best){
+      record.status = "matched";
+      best.record.status = "matched";
+      showMatchModal(record, best.record, best.score);
+    }
+  }
+
+  /* ---------- Rendering ---------- */
+  function applyStaticText(){
+    document.getElementById("brandLabel").textContent = t("brand");
+    document.getElementById("taglineLabel").textContent = t("tagline");
+    document.getElementById("loginTaglineLabel").textContent = t("tagline");
+    document.getElementById("loginTitle").textContent = t("loginTitle");
+    document.getElementById("emailLabel").textContent = t("emailLabel");
+    document.getElementById("sendLinkBtn").textContent = t("sendLink");
+    document.getElementById("logoutBtn").textContent = t("logout");
+    document.getElementById("tabMissingLabel").textContent = t("tabMissing");
+    document.getElementById("tabFoundLabel").textContent = t("tabFound");
+    document.getElementById("tabDashboardLabel").textContent = t("tabDashboard");
+    document.querySelectorAll("[data-k]").forEach(el=>{
+      el.textContent = t(el.getAttribute("data-k"));
+    });
+    document.getElementById("submitMissingBtn").textContent = editingId.missing ? t("update") : t("submit");
+    document.getElementById("submitFoundBtn").textContent = editingId.found ? t("update") : t("submit");
+    document.getElementById("cancelMissingBtn").textContent = t("cancel");
+    document.getElementById("cancelFoundBtn").textContent = t("cancel");
+    document.getElementById("addFieldMissingBtn").textContent = t("addCustomField");
+    document.getElementById("addFieldFoundBtn").textContent = t("addCustomField");
+    document.getElementById("closeMatchModal").textContent = t("close");
+    updateCoordReadout("missing");
+    updateCoordReadout("found");
+    if(pendingEmail && document.getElementById("loginNote").style.display !== "none"){
+      document.getElementById("loginNote").innerHTML =
+        escapeHtml(t("verifyPrompt", {email: pendingEmail})) + '<br><br><button id="verifyBtn" style="width:100%;margin-top:4px;"></button>';
+      document.getElementById("verifyBtn").textContent = t("verifyBtn");
+      document.getElementById("verifyBtn").onclick = completeLogin;
+    }
+    renderCustomFields("missing");
+    renderCustomFields("found");
+    renderDashboard();
+  }
+  function escapeHtml(s){
+    const d = document.createElement("div"); d.textContent = s; return d.innerHTML;
+  }
+  function updateCoordReadout(kind){
+    const el = document.querySelector('[data-coord-for="'+kind+'"]');
+    if(!el) return;
+    const c = coords[kind];
+    if(!c){ el.textContent = t("coordUnset"); return; }
+    if(c.placeName === undefined){ el.textContent = t("locationLoading"); return; }
+    if(c.placeName){ el.textContent = c.placeName; return; }
+    el.textContent = t("coordSet", {lat:c.lat.toFixed(4), lng:c.lng.toFixed(4)});
+  }
+  async function reverseGeocode(lat, lng){
+    try{
+      const res = await fetch("https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat="+lat+"&lon="+lng+"&zoom=16&addressdetails=1");
+      if(!res.ok) throw new Error("bad response");
+      const data = await res.json();
+      return data && data.display_name ? data.display_name : null;
+    }catch(e){
+      return null;
+    }
+  }
+
+  /* ---------- Language ---------- */
+  const langSelect = document.getElementById("langSelect");
+  [["en","English"],["ml","മലയാളം"]].forEach(([code,label])=>{
+    const o = document.createElement("option"); o.value = code; o.textContent = label; langSelect.appendChild(o);
+  });
+  langSelect.value = lang;
+  langSelect.addEventListener("change", ()=>{ lang = langSelect.value; applyStaticText(); });
+
+  /* ---------- Login flow (simulated passwordless magic link, in-memory only) ---------- */
+  document.getElementById("sendLinkBtn").addEventListener("click", ()=>{
+    const email = document.getElementById("emailInput").value.trim();
+    if(!email) return;
+    pendingEmail = email;
+    document.getElementById("loginNote").style.display = "block";
+    applyStaticText();
+  });
+  function completeLogin(){
+    session = { email: pendingEmail };
+    pendingEmail = null;
+    document.getElementById("loginView").style.display = "none";
+    document.getElementById("mainView").style.display = "block";
+    document.getElementById("logoutBtn").style.display = "inline-block";
+    setTimeout(()=>{ initMapIfNeeded("missing"); initMapIfNeeded("found"); }, 30);
+    renderDashboard();
+  }
+  document.getElementById("logoutBtn").addEventListener("click", ()=>{
+    session = null;
+    document.getElementById("emailInput").value = "";
+    document.getElementById("loginNote").style.display = "none";
+    document.getElementById("mainView").style.display = "none";
+    document.getElementById("logoutBtn").style.display = "none";
+    document.getElementById("loginView").style.display = "flex";
+  });
+
+  /* ---------- Tabs ---------- */
+  document.querySelectorAll(".tab").forEach(tab=>{
+    tab.addEventListener("click", ()=>{
+      document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));
+      document.querySelectorAll(".panel").forEach(x=>x.classList.remove("active"));
+      tab.classList.add("active");
+      document.getElementById("panel-"+tab.dataset.panel).classList.add("active");
+      if(tab.dataset.panel==="dashboard") renderDashboard();
+      if(tab.dataset.panel==="missing" || tab.dataset.panel==="found"){
+        setTimeout(()=>{ initMapIfNeeded(tab.dataset.panel); maps[tab.dataset.panel] && maps[tab.dataset.panel].invalidateSize(); },20);
+      }
+    });
+  });
+
+  /* ---------- Maps ---------- */
+  function initMapIfNeeded(kind){
+    if(maps[kind] || !session) return;
+    const el = document.getElementById(kind+"Map");
+    if(!el || !window.L) return;
+    const map = L.map(el, {attributionControl:false}).setView([10.8505, 76.2711], 6);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{ maxZoom:18 }).addTo(map);
+    map.on("click", (e)=>{
+      const clickedLat = e.latlng.lat, clickedLng = e.latlng.lng;
+      coords[kind] = { lat:clickedLat, lng:clickedLng, placeName: undefined };
+      if(markers[kind]) map.removeLayer(markers[kind]);
+      markers[kind] = L.marker(e.latlng).addTo(map);
+      updateCoordReadout(kind);
+      reverseGeocode(clickedLat, clickedLng).then(name=>{
+        if(coords[kind] && coords[kind].lat === clickedLat && coords[kind].lng === clickedLng){
+          coords[kind].placeName = name;
+          updateCoordReadout(kind);
+        }
+      });
+    });
+    maps[kind] = map;
+  }
+
+  /* ---------- Custom fields ---------- */
+  function renderCustomFields(kind){
+    const container = document.getElementById(kind==="missing" ? "customFieldsMissing" : "customFieldsFound");
+    container.innerHTML = "";
+    customFields[kind].forEach(cf=>{
+      const row = document.createElement("div");
+      row.className = "custom-field-row";
+      row.innerHTML =
+        '<input placeholder="'+escapeHtml(t("customFieldLabel"))+'" data-cf-label="'+cf.id+'" value="'+escapeHtml(cf.label)+'" />'+
+        '<input placeholder="'+escapeHtml(t("customFieldValue"))+'" data-cf-value="'+cf.id+'" value="'+escapeHtml(cf.value)+'" />'+
+        '<button class="secondary tiny" data-cf-remove="'+cf.id+'">'+escapeHtml(t("removeField"))+'</button>';
+      container.appendChild(row);
+    });
+    container.querySelectorAll("[data-cf-label]").forEach(inp=>{
+      inp.addEventListener("input", ()=>{
+        const cf = customFields[kind].find(c=>c.id===parseInt(inp.getAttribute("data-cf-label"),10));
+        if(cf) cf.label = inp.value;
+      });
+    });
+    container.querySelectorAll("[data-cf-value]").forEach(inp=>{
+      inp.addEventListener("input", ()=>{
+        const cf = customFields[kind].find(c=>c.id===parseInt(inp.getAttribute("data-cf-value"),10));
+        if(cf) cf.value = inp.value;
+      });
+    });
+    container.querySelectorAll("[data-cf-remove]").forEach(btn=>{
+      btn.addEventListener("click", ()=>{
+        const id = parseInt(btn.getAttribute("data-cf-remove"),10);
+        customFields[kind] = customFields[kind].filter(c=>c.id!==id);
+        renderCustomFields(kind);
+      });
+    });
+  }
+  document.getElementById("addFieldMissingBtn").addEventListener("click", ()=>{
+    customFields.missing.push({id:customFieldId++, label:"", value:""});
+    renderCustomFields("missing");
+  });
+  document.getElementById("addFieldFoundBtn").addEventListener("click", ()=>{
+    customFields.found.push({id:customFieldId++, label:"", value:""});
+    renderCustomFields("found");
+  });
+
+  /* ---------- Forms ---------- */
+  function readForm(kind){
+    const panel = document.getElementById("panel-"+kind);
+    const data = {};
+    panel.querySelectorAll("[data-f]").forEach(inp=>{ data[inp.getAttribute("data-f")] = inp.value.trim(); });
+    return data;
+  }
+  function writeForm(kind, data){
+    const panel = document.getElementById("panel-"+kind);
+    panel.querySelectorAll("[data-f]").forEach(inp=>{ inp.value = data[inp.getAttribute("data-f")] || ""; });
+  }
+  function clearForm(kind){
+    writeForm(kind, {});
+    coords[kind] = null;
+    if(markers[kind] && maps[kind]){ maps[kind].removeLayer(markers[kind]); markers[kind]=null; }
+    updateCoordReadout(kind);
+    editingId[kind] = null;
+    customFields[kind] = [];
+    renderCustomFields(kind);
+    document.getElementById("cancelMissingBtn").style.display = editingId.missing ? "inline-block":"none";
+    document.getElementById("cancelFoundBtn").style.display = editingId.found ? "inline-block":"none";
+    applyStaticText();
+  }
+
+  function submitForm(kind){
+    const data = readForm(kind);
+    if(!data.name || !data.age || !coords[kind]){
+      alert(t("requiredAlert"));
+      return;
+    }
+    const cfSnapshot = customFields[kind].filter(cf=>cf.label.trim()).map(cf=>({label:cf.label, value:cf.value}));
+    if(editingId[kind]){
+      const rec = records.find(r=>r.id===editingId[kind]);
+      Object.assign(rec, data, { lat:coords[kind].lat, lng:coords[kind].lng, placeName:coords[kind].placeName||null, status:"open", customFields: cfSnapshot });
+      runMatchEngine(rec);
+    } else {
+      const rec = Object.assign({}, data, {
+        id: nextId++, type: kind, email: session.email,
+        lat: coords[kind].lat, lng: coords[kind].lng, placeName: coords[kind].placeName||null,
+        status: "open", createdAt: new Date().toISOString(),
+        customFields: cfSnapshot
+      });
+      records.push(rec);
+      runMatchEngine(rec);
+    }
+    clearForm(kind);
+    renderDashboard();
+  }
+  document.getElementById("submitMissingBtn").addEventListener("click", ()=>submitForm("missing"));
+  document.getElementById("submitFoundBtn").addEventListener("click", ()=>submitForm("found"));
+  document.getElementById("cancelMissingBtn").addEventListener("click", ()=>clearForm("missing"));
+  document.getElementById("cancelFoundBtn").addEventListener("click", ()=>clearForm("found"));
+
+  function editRecord(id){
+    const rec = records.find(r=>r.id===id);
+    if(!rec || !session || rec.email !== session.email) return;
+    const kind = rec.type;
+    document.querySelector('.tab[data-panel="'+kind+'"]').click();
+    editingId[kind] = id;
+    writeForm(kind, rec);
+    coords[kind] = { lat:rec.lat, lng:rec.lng, placeName: rec.placeName };
+    customFields[kind] = (rec.customFields||[]).map(cf=>({id:customFieldId++, label:cf.label, value:cf.value}));
+    renderCustomFields(kind);
+    setTimeout(()=>{
+      initMapIfNeeded(kind);
+      if(maps[kind]){
+        maps[kind].setView([rec.lat, rec.lng], 12);
+        if(markers[kind]) maps[kind].removeLayer(markers[kind]);
+        markers[kind] = L.marker([rec.lat, rec.lng]).addTo(maps[kind]);
+      }
+      updateCoordReadout(kind);
+    }, 50);
+    document.getElementById("cancelMissingBtn").style.display = kind==="missing" ? "inline-block":"none";
+    document.getElementById("cancelFoundBtn").style.display = kind==="found" ? "inline-block":"none";
+    applyStaticText();
+  }
+
+  /* ---------- Dashboard ---------- */
+  function renderDashboard(){
+    const body = document.getElementById("dashboardBody");
+    const table = document.getElementById("dashboardTable");
+    const empty = document.getElementById("dashboardEmpty");
+    if(!session){ return; }
+    const mine = records.filter(r=>r.email === session.email).sort((a,b)=> new Date(b.createdAt)-new Date(a.createdAt));
+    if(mine.length===0){
+      table.style.display="none"; empty.style.display="block"; empty.textContent = t("emptyDashboard");
+      return;
+    }
+    table.style.display="table"; empty.style.display="none";
+    body.innerHTML = "";
+    mine.forEach(r=>{
+      const tr = document.createElement("tr");
+      const submitted = new Date(r.createdAt).toLocaleString();
+      tr.innerHTML =
+        '<td>'+escapeHtml(r.type==="missing"?t("typeMissing"):t("typeFound"))+'</td>'+
+        '<td>'+escapeHtml(r.name||"")+'</td>'+
+        '<td>'+escapeHtml(submitted)+'</td>'+
+        '<td><span class="status-pill">'+escapeHtml(r.status==="matched"?t("statusMatched"):t("statusOpen"))+'</span></td>'+
+        '<td><button class="secondary" data-edit="'+r.id+'">'+escapeHtml(t("edit"))+'</button></td>';
+      body.appendChild(tr);
+    });
+    body.querySelectorAll("[data-edit]").forEach(btn=>{
+      btn.addEventListener("click", ()=> editRecord(parseInt(btn.getAttribute("data-edit"),10)));
+    });
+  }
+
+  /* ---------- Match modal (simulated email) ---------- */
+  function showMatchModal(recA, recB, score){
+    document.getElementById("matchModalTitle").textContent = t("matchTitle");
+    document.getElementById("matchModalSub").textContent = t("matchSub");
+    const subject = t("emailSubjectText", {pct: score});
+    const preview = document.getElementById("matchEmailPreview");
+    preview.innerHTML =
+      '<div><strong>'+escapeHtml(t("emailTo"))+':</strong> '+escapeHtml(recA.email)+' &amp; '+escapeHtml(recB.email)+'</div>'+
+      '<div><strong>'+escapeHtml(t("emailSubject"))+':</strong> '+escapeHtml(subject)+'</div>'+
+      '<table>'+
+        '<tr><td><strong>'+escapeHtml(t("fieldName"))+'</strong></td><td>'+escapeHtml(recA.name)+'</td><td>'+escapeHtml(recB.name)+'</td></tr>'+
+        '<tr><td><strong>'+escapeHtml(t("fieldAge"))+'</strong></td><td>'+escapeHtml(recA.age)+'</td><td>'+escapeHtml(recB.age)+'</td></tr>'+
+        '<tr><td><strong>'+escapeHtml(t("fieldHeight"))+'</strong></td><td>'+escapeHtml(recA.height)+'</td><td>'+escapeHtml(recB.height)+'</td></tr>'+
+        '<tr><td><strong>'+escapeHtml(t("fieldMarks"))+'</strong></td><td>'+escapeHtml(recA.marks)+'</td><td>'+escapeHtml(recB.marks)+'</td></tr>'+
+      '</table>';
+    document.getElementById("matchModalBackdrop").classList.add("show");
+  }
+  document.getElementById("closeMatchModal").addEventListener("click", ()=>{
+    document.getElementById("matchModalBackdrop").classList.remove("show");
+  });
+
+  applyStaticText();
+})();
+</script>
+</body>
+</html>
